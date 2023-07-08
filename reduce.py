@@ -93,16 +93,30 @@ class DimensionalityReduction:
         X_reconstructed = linear_regression.predict(X_transformed)
         return X_reconstructed
 
-    def plot_images(self, ax, show_n_components=False):
-        ax.imshow(self.X_std_reconstructed.reshape(self.image_shape))
-        
+    def _get_title(self, show_n_components=False):
         title = self.method
         if self.method == 'kpca':
             title += '_' + self.kpca_kernel
         if show_n_components:
             title += "_" + str(self.n_components)
-        title = title.upper()
-        ax.set_title(title)
+        
+        return title.upper()
+
+    def plot_images(self, ax, show_n_components=False):
+        ax.imshow(self.X_std_reconstructed.reshape(self.image_shape))
+        ax.set_title(self._get_title(show_n_components=show_n_components))
+    
+    def save_recon_img(self, file_path, file_name, fmt='jpg'):
+        img_ndarray = self.X_std_reconstructed.reshape(self.image_shape)
+        self._save_img(img_ndarray, file_path, file_name,fmt=fmt)
+        
+    @staticmethod
+    def _save_img(data, file_path, file_name, fmt='jpg'):
+        data = data.astype(np.uint8)
+        img = Image.fromarray(data)
+        # Save the image
+        img.save(os.path.join(file_path, file_name + '.' + fmt))
+    
     # ! add this after convert this file to R code
     def plot_all_kpca_kernels(self):
         kernels = ['linear', 'poly', 'rbf', 'cosine']
@@ -122,43 +136,47 @@ class DimensionalityReduction:
         plt.tight_layout()
         plt.show()
         
-    # ! deprecated
-    def plot_all_isomap(self):
-        n_neighbors = np.array([2, 3, 4, 5, 6])*3
-        len_n_neighbors = len(n_neighbors)
+    # # ! deprecated
+    # def plot_all_isomap(self):
+    #     n_neighbors = np.array([2, 3, 4, 5, 6])*3
+    #     len_n_neighbors = len(n_neighbors)
 
-        fig, axes = plt.subplots(1, len_n_neighbors + 1, figsize=(len_n_neighbors * 3, 3))
+    #     fig, axes = plt.subplots(1, len_n_neighbors + 1, figsize=(len_n_neighbors * 3, 3))
 
-        # Plot original image
-        axes[0].imshow(self.X.reshape(self.image_shape))
-        axes[0].set_title('Original')
+    #     # Plot original image
+    #     axes[0].imshow(self.X.reshape(self.image_shape))
+    #     axes[0].set_title('Original')
 
-        # Plot images for all kpca methods
-        for i, neighbors in enumerate(n_neighbors):
-            dr = DimensionalityReduction(self.X, self.image_shape, method='isomap', n_neighbors=neighbors, n_components=self.n_components)
-            dr.plot_images(axes[i + 1])
+    #     # Plot images for all kpca methods
+    #     for i, neighbors in enumerate(n_neighbors):
+    #         dr = DimensionalityReduction(self.X, self.image_shape, method='isomap', n_neighbors=neighbors, n_components=self.n_components)
+    #         dr.plot_images(axes[i + 1])
 
-        plt.tight_layout()
-        plt.show()
+    #     plt.tight_layout()
+    #     plt.show()
         
     # ! add this after convert this file to R code
-    def plot_kpca_n_components(self):
+    @staticmethod
+    def plot_kpca_n_components(X, image_shape):
         n_components = np.array([1, 2, 4, 8, 12])*10
         len_n_components = len(n_components)
 
         fig, axes = plt.subplots(1, len_n_components + 1 + 1, figsize=(len_n_components * 3, 3))
 
         # Plot original image
-        axes[0].imshow(self.X.reshape(self.image_shape))
+        axes[0].imshow(X.reshape(image_shape))
         axes[0].set_title('Original')
+        DimensionalityReduction._save_img(X, '.', 'Original')
 
         # Plot images for all kpca methods
         for i, components in enumerate(n_components):
-            dr = DimensionalityReduction(self.X, self.image_shape, method='pca', n_components=components)
+            dr = DimensionalityReduction(X, image_shape, method='pca', n_components=components)
             dr.plot_images(axes[i + 1], show_n_components=True)
+            dr.save_recon_img('.', dr._get_title(show_n_components=True))
 
-        dr = DimensionalityReduction(self.X, self.image_shape, method='kpca', n_components=10)
+        dr = DimensionalityReduction(X, image_shape, method='kpca', n_components=10)
         dr.plot_images(axes[-1], show_n_components=True)
+        dr.save_recon_img('.', dr._get_title(show_n_components=True))
 
         plt.tight_layout()
         plt.show()
@@ -211,19 +229,19 @@ class DimensionalityReduction:
 
         return evaluations
     
-    # !deprecated
-    def evaluate_isomaps(self):
-        n_neighbors = np.array([2, 3, 4, 5, 6])*3
-        evaluations = []
+    # # !deprecated
+    # def evaluate_isomaps(self):
+    #     n_neighbors = np.array([2, 3, 4, 5, 6])*3
+    #     evaluations = []
             
-        for neighbors in n_neighbors:
-            dr = DimensionalityReduction(self.X, self.image_shape, method='isomap', n_neighbors=neighbors, n_components=self.n_components)
-            mse, psnr, ssim_val = self.image_metrics(self.X, dr.X_std_reconstructed)
-            evaluations.append((neighbors, mse, psnr, ssim_val))
-            max_diff = np.abs(self.X - dr.X_std_reconstructed).max()
-            print(f"{neighbors} - Max difference between original and reconstructed image: {max_diff}")
+    #     for neighbors in n_neighbors:
+    #         dr = DimensionalityReduction(self.X, self.image_shape, method='isomap', n_neighbors=neighbors, n_components=self.n_components)
+    #         mse, psnr, ssim_val = self.image_metrics(self.X, dr.X_std_reconstructed)
+    #         evaluations.append((neighbors, mse, psnr, ssim_val))
+    #         max_diff = np.abs(self.X - dr.X_std_reconstructed).max()
+    #         print(f"{neighbors} - Max difference between original and reconstructed image: {max_diff}")
 
-        return evaluations
+    #     return evaluations
     
     # ! add this after convert this file to R code
     def evaluate_kpca_n_components(self):
@@ -319,10 +337,11 @@ def main():
     # dr.plot_all_isomap()
     # dr.plot_evaluation_barchart(dr.evaluate_isomaps())
 
-    dr.plot_kpca_n_components()
+    DimensionalityReduction.plot_kpca_n_components(X, image_shape)
     dr.plot_evaluation_barchart(dr.evaluate_kpca_n_components())
 
-
+# if __name__ == "__main__":
+#     main()
 
 
 if __name__ == "__main__":
