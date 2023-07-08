@@ -93,13 +93,16 @@ class DimensionalityReduction:
         X_reconstructed = linear_regression.predict(X_transformed)
         return X_reconstructed
 
-    def plot_images(self, ax):
+    def plot_images(self, ax, show_n_components=False):
         ax.imshow(self.X_std_reconstructed.reshape(self.image_shape))
-        if self.method == 'kpca':
-            ax.set_title((self.method + '_' + self.kpca_kernel).upper())
-        else:
-            ax.set_title(self.method.upper())
         
+        title = self.method
+        if self.method == 'kpca':
+            title += '_' + self.kpca_kernel
+        if show_n_components:
+            title += "_" + str(self.n_components)
+        title = title.upper()
+        ax.set_title(title)
     # ! add this after convert this file to R code
     def plot_all_kpca_kernels(self):
         kernels = ['linear', 'poly', 'rbf', 'cosine']
@@ -140,10 +143,10 @@ class DimensionalityReduction:
         
     # ! add this after convert this file to R code
     def plot_kpca_n_components(self):
-        n_components = np.array([2, 3, 4, 5, 6])*5
+        n_components = np.array([1, 2, 4, 8, 12])*10
         len_n_components = len(n_components)
 
-        fig, axes = plt.subplots(1, len_n_components + 1, figsize=(len_n_components * 3, 3))
+        fig, axes = plt.subplots(1, len_n_components + 1 + 1, figsize=(len_n_components * 3, 3))
 
         # Plot original image
         axes[0].imshow(self.X.reshape(self.image_shape))
@@ -151,8 +154,11 @@ class DimensionalityReduction:
 
         # Plot images for all kpca methods
         for i, components in enumerate(n_components):
-            dr = DimensionalityReduction(self.X, self.image_shape, method='kpca', n_components=components)
-            dr.plot_images(axes[i + 1])
+            dr = DimensionalityReduction(self.X, self.image_shape, method='pca', n_components=components)
+            dr.plot_images(axes[i + 1], show_n_components=True)
+
+        dr = DimensionalityReduction(self.X, self.image_shape, method='kpca', n_components=10)
+        dr.plot_images(axes[-1], show_n_components=True)
 
         plt.tight_layout()
         plt.show()
@@ -220,16 +226,22 @@ class DimensionalityReduction:
         return evaluations
     
     # ! add this after convert this file to R code
-    def evaluate_n_components(self):
-        n_components = np.array([2, 3, 4, 5, 6])*8
+    def evaluate_kpca_n_components(self):
+        n_components = np.array([1, 2, 4, 8, 12])*10
         evaluations = []
             
         for components in n_components:
-            dr = DimensionalityReduction(self.X, self.image_shape, method='kpca', n_components=components)
+            dr = DimensionalityReduction(self.X, self.image_shape, method='pca', n_components=components)
             mse, psnr, ssim_val = self.image_metrics(self.X, dr.X_std_reconstructed)
-            evaluations.append((components, mse, psnr, ssim_val))
+            evaluations.append(('pca_' + str(components), mse, psnr, ssim_val))
             max_diff = np.abs(self.X - dr.X_std_reconstructed).max()
             print(f"{components} - Max difference between original and reconstructed image: {max_diff}")
+            
+        dr = DimensionalityReduction(self.X, self.image_shape, method='kpca', n_components=10)
+        mse, psnr, ssim_val = self.image_metrics(self.X, dr.X_std_reconstructed)
+        evaluations.append(('kpca_' + str(10), mse, psnr, ssim_val))
+        max_diff = np.abs(self.X - dr.X_std_reconstructed).max()
+        print(f"{components} - Max difference between original and reconstructed image: {max_diff}")
             
         return evaluations
 
@@ -289,34 +301,37 @@ class DimensionalityReduction:
         fig.tight_layout()
         plt.show()
 
-# # Load dataset and perform dimensionality reduction
-# X, image_shape = fetch_101()
-# dr_pca = DimensionalityReduction(X, image_shape, method='pca', n_components=10)
-# dr_kpca = DimensionalityReduction(X, image_shape, method='kpca', n_components=10)
-# dr_isomap = DimensionalityReduction(X, image_shape, method='isomap', n_components=64)
-# dr_lle = DimensionalityReduction(X, image_shape, method='lle', n_components=64)
 
-# # Plot images
-# dr_pca.plot_images()
-# dr_kpca.plot_images()
-# dr_isomap.plot_images()
-# dr_lle.plot_images()
+def main():
+    # Load dataset and perform dimensionality reduction
+    X, image_shape = fetch_101()
+    dr = DimensionalityReduction(X, image_shape, n_components=15)
 
-# Load dataset and perform dimensionality reduction
-X, image_shape = fetch_101()
-dr = DimensionalityReduction(X, image_shape, n_components=15)
-
-# Plot images for all methods
+    # Plot images for all methods
 
 
-# dr.plot_all_kpca_kernels()
-# dr.plot_evaluation_barchart(dr.evaluate_kpca_kernels())
+    # dr.plot_all_kpca_kernels()
+    # dr.plot_evaluation_barchart(dr.evaluate_kpca_kernels())
 
-# dr.plot_all_methods()
-# dr.plot_evaluation_barchart(dr.evaluate_methods())
+    # dr.plot_all_methods()
+    # dr.plot_evaluation_barchart(dr.evaluate_methods())
 
-# dr.plot_all_isomap()
-# dr.plot_evaluation_barchart(dr.evaluate_isomaps())
+    # dr.plot_all_isomap()
+    # dr.plot_evaluation_barchart(dr.evaluate_isomaps())
 
-dr.plot_kpca_n_components()
-dr.plot_evaluation_barchart(dr.evaluate_n_components())
+    dr.plot_kpca_n_components()
+    dr.plot_evaluation_barchart(dr.evaluate_kpca_n_components())
+
+
+
+
+if __name__ == "__main__":
+    while True:
+        try:
+            main()
+            break  # Exit the loop if the main function executes successfully
+        except Exception as e:
+            print(f"An error occurred: {e}, trying again...")
+
+    print("Successfully executed the code block.")
+    exit(0)
