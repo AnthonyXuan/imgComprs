@@ -1,5 +1,5 @@
 101_ObjectCategories/
-data/# Byte-compiled / optimized / DLL files
+data/
 __pycache__/
 *.py[cod]
 *$py.class
